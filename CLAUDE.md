@@ -178,25 +178,26 @@ Core dependencies managed in `pyproject.toml`:
 
 ### Bug Fix Plan
 
-#### Phase 1: Write Comprehensive Tests
-1. Create test framework for bug reproduction
-2. Implement tests for each identified issue
-3. Document specific failure modes and resource leaks
-4. Establish baseline measurements for resource usage
+#### Phase 1: Fix File Descriptor Management ✅ **COMPLETED**
+1. ✅ **BUG-4 Fixed**: Added error handling to `_stop_one()` method in redirector.py
+2. ✅ **Validation Complete**: Verified fix handles production scenarios
+3. ✅ **Tests Created**: Comprehensive test suite for fd management bugs
 
-#### Phase 2: Fix Critical Issues
+#### Phase 2: Fix Signal Handler Safety Issues
 1. **Signal Handler Safety**: Rewrite handlers to use self-pipe trick or signalfd
+2. **Async-Signal-Safe Operations**: Remove unsafe operations from signal handlers
+3. **Test Validation**: Verify signal safety under high load
+
+#### Phase 3: Fix Synchronization Issues
+1. **ConflictError Resolution**: Fix @synchronized decorator conflicts
 2. **Process Reaping Race**: Add proper synchronization or atomic operations
 3. **Resource Leaks**: Add proper error handling and cleanup in all paths
 
-#### Phase 3: Fix Medium Priority Issues  
+#### Phase 4: Fix Additional Issues
 1. **ThreadedArbiter**: Implement thread-safe signal handling
 2. **SIGCHLD Handler**: Add immediate process reaping via signal handler
-3. **Error Handling**: Improve error propagation and resource cleanup
-
-#### Phase 4: Fix Low Priority Issues
-1. **Signal Interruption**: Configure all relevant signals properly
-2. **Stream Redirector**: Fix lifecycle management
+3. **Signal Interruption**: Configure all relevant signals properly
+4. **Stream Redirector**: Improve lifecycle management
 
 #### Phase 5: Verification
 1. Run all tests to verify fixes

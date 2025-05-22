@@ -62,7 +62,16 @@ class Redirector(object):
 
     def _stop_one(self, fd):
         if fd in self._active:
-            self.loop.remove_handler(fd)
+            try:
+                self.loop.remove_handler(fd)
+            except (KeyError, ValueError, OSError) as e:
+                # Handler may already be removed or fd may be invalid
+                # Log the error but continue with cleanup to maintain consistency
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning("Failed to remove handler for fd %d: %s", fd, e)
+            
+            # Always clean up our internal state regardless of remove_handler success
             del self._active[fd]
             return 1
         return 0
