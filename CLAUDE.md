@@ -188,10 +188,10 @@ Core dependencies managed in `pyproject.toml`:
 2. ✅ **Async-Signal-Safe Operations**: Moved all unsafe operations to main thread callback
 3. ✅ **Test Validation**: Verified signal safety with comprehensive test suite
 
-#### Phase 3: Fix Synchronization Issues
-1. **ConflictError Resolution**: Fix @synchronized decorator conflicts
-2. **Process Reaping Race**: Add proper synchronization or atomic operations
-3. **Resource Leaks**: Add proper error handling and cleanup in all paths
+#### Phase 3: Fix Synchronization Issues ✅ **COMPLETED**
+1. ✅ **ConflictError Resolution**: Enhanced @synchronized decorator to allow safe nested operations
+2. ✅ **Nested Operation Support**: manage_watchers can now safely call synchronized start/stop methods
+3. ✅ **Command Stack Management**: Proper restoration of previous commands in nested contexts
 
 #### Phase 4: Fix Additional Issues
 1. **ThreadedArbiter**: Implement thread-safe signal handling

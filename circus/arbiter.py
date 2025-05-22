@@ -661,7 +661,8 @@ class Arbiter(object):
             rlist, wlist, xlist = select.select(sockets, [], [], 0)
             if rlist:
                 self.socket_event = True
-                self._start_watchers()
+                # Use synchronized version instead of bypassing synchronization
+                yield self.start_watchers()
                 self.socket_event = False
 
     @synchronized("arbiter_reload")

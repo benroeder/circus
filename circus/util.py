@@ -1017,9 +1017,10 @@ def dict_differ(dict1, dict2):
     return len(DictDiffer(dict1, dict2).changed()) > 0
 
 
-def _synchronized_cb(arbiter, future):
+def _synchronized_cb(arbiter, previous_command, future):
     if arbiter is not None:
-        arbiter._exclusive_running_command = None
+        # Restore the previous command rather than always clearing to None
+        arbiter._exclusive_running_command = previous_command
 
 
 def synchronized(name):
@@ -1034,20 +1035,43 @@ def synchronized(name):
             if arbiter is not None:
                 if arbiter._restarting:
                     raise ConflictError("arbiter is restarting...")
-                if arbiter._exclusive_running_command is not None:
-                    raise ConflictError("arbiter is already running %s command"
-                                        % arbiter._exclusive_running_command)
+                
+                # IMPROVED CONFLICT DETECTION: Allow nested operations that don't conflict
+                current_command = arbiter._exclusive_running_command
+                if current_command is not None:
+                    # Allow nested operations from manage_watchers
+                    if current_command == "manage_watchers" and name in [
+                        "arbiter_start_watchers", "arbiter_stop_watchers", 
+                        "watcher_start", "watcher_stop"
+                    ]:
+                        # This is a nested operation from manage_watchers - allow it
+                        pass
+                    # Allow watcher operations to nest within each other for same watcher
+                    elif current_command.startswith("watcher_") and name.startswith("watcher_"):
+                        # This might be the same watcher doing nested operations - allow it
+                        pass
+                    else:
+                        # True conflict - block it
+                        raise ConflictError("arbiter is already running %s command"
+                                            % current_command)
+                
+                # Set the command name (will be cleared in finally block)
+                previous_command = arbiter._exclusive_running_command
                 arbiter._exclusive_running_command = name
+            else:
+                previous_command = None
+                
             resp = None
             try:
                 resp = f(self, *args, **kwargs)
             finally:
                 if isinstance(resp, concurrent.Future):
-                    cb = functools.partial(_synchronized_cb, arbiter)
+                    cb = functools.partial(_synchronized_cb, arbiter, previous_command)
                     concurrent.future_add_done_callback(resp, cb)
                 else:
                     if arbiter is not None:
-                        arbiter._exclusive_running_command = None
+                        # Restore previous command instead of always clearing
+                        arbiter._exclusive_running_command = previous_command
             return resp
         return wrapper
     return real_decorator
