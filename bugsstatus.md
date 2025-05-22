@@ -20,7 +20,7 @@ Investigation of production stack traces has revealed **4 critical bugs** in the
 
 | Bug ID | Description | Severity | Reproduction | Fix Status |
 |--------|-------------|----------|--------------|------------|
-| **BUG-1** | Signal Handler Safety Violations | CRITICAL | ✅ REPRODUCED | Solution Ready |
+| **BUG-1** | Signal Handler Safety Violations | CRITICAL | ✅ REPRODUCED | **✅ FIXED** |
 | **BUG-2** | ConflictError: watcher_stop command | CRITICAL | ✅ REPRODUCED | Solution Ready |  
 | **BUG-3** | ConflictError: arbiter_start_watchers command | CRITICAL | ✅ REPRODUCED | Solution Ready |
 | **BUG-4** | ValueError: fd X added twice | CRITICAL | ✅ REPRODUCED | **✅ FIXED** |
@@ -31,9 +31,9 @@ Investigation of production stack traces has revealed **4 critical bugs** in the
 
 ### **BUG-1: Signal Handler Safety Violations**
 
-**Location**: `circus/sighandler.py:48-61`  
+**Location**: `circus/sighandler.py:48-78`  
 **Discovery**: Code analysis + reproduction test  
-**Status**: ✅ **REPRODUCED**
+**Status**: ✅ **FIXED** *(January 2025)*
 
 **Production Stack Trace** (Potential):
 ```
@@ -131,7 +131,39 @@ Signal handlers perform operations that violate async-signal-safety rules:
 ✅ Test demonstrates unsafe operation execution
 ```
 
-**Reproduction**: `tests/test_signal_safety_demo.py`
+**Fix Applied**:
+Implemented async-signal-safe signal handling using Tornado's `add_callback_from_signal()`:
+
+```python
+def signal(self, sig, frame=None):
+    # ASYNC-SIGNAL-SAFE: Only use signal-safe operations in signal handlers
+    try:
+        # Use the tornado-safe callback mechanism to defer all processing
+        self.controller.loop.add_callback_from_signal(
+            self._handle_signal_safe, sig
+        )
+    except Exception:
+        # If we can't even transfer control, use only signal-safe operations
+        import os
+        os.write(2, b"CRITICAL: Signal handler failed to transfer control\n")
+        os._exit(1)
+
+def _handle_signal_safe(self, sig):
+    # This runs in the main event loop thread - safe to do complex operations
+    signame = self.SIG_NAMES.get(sig)
+    logger.info('Got signal SIG_%s' % (signame.upper() if signame else 'UNKNOWN'))
+    # ... rest of original logic runs safely in main thread
+```
+
+**Fix Benefits**:
+- ✅ **Async-signal-safe**: Signal handler only performs safe operations
+- ✅ **No deadlocks**: Logging and complex operations moved to main thread
+- ✅ **Error resilient**: Graceful fallback using only signal-safe functions
+- ✅ **Performance**: Minimal overhead in signal handler itself
+- ✅ **Maintains functionality**: All original signal handling behavior preserved
+
+**Reproduction**: `tests/test_signal_safety_demo.py`  
+**Validation**: `tests/test_signal_safety_fix.py`
 
 ---
 

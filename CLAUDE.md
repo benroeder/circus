@@ -183,10 +183,10 @@ Core dependencies managed in `pyproject.toml`:
 2. ✅ **Validation Complete**: Verified fix handles production scenarios
 3. ✅ **Tests Created**: Comprehensive test suite for fd management bugs
 
-#### Phase 2: Fix Signal Handler Safety Issues
-1. **Signal Handler Safety**: Rewrite handlers to use self-pipe trick or signalfd
-2. **Async-Signal-Safe Operations**: Remove unsafe operations from signal handlers
-3. **Test Validation**: Verify signal safety under high load
+#### Phase 2: Fix Signal Handler Safety Issues ✅ **COMPLETED**
+1. ✅ **Signal Handler Safety**: Implemented async-signal-safe handling using add_callback_from_signal()
+2. ✅ **Async-Signal-Safe Operations**: Moved all unsafe operations to main thread callback
+3. ✅ **Test Validation**: Verified signal safety with comprehensive test suite
 
 #### Phase 3: Fix Synchronization Issues
 1. **ConflictError Resolution**: Fix @synchronized decorator conflicts

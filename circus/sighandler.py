@@ -46,8 +46,25 @@ class SysHandler(object):
             signal.siginterrupt(signal.SIGUSR1, False)
 
     def signal(self, sig, frame=None):
+        # ASYNC-SIGNAL-SAFE: Only use signal-safe operations in signal handlers
+        # Transfer control to the main event loop thread immediately
+        try:
+            # Use the tornado-safe callback mechanism to defer all processing
+            # This is the ONLY safe operation to perform in a signal handler
+            self.controller.loop.add_callback_from_signal(
+                self._handle_signal_safe, sig
+            )
+        except Exception:
+            # If we can't even transfer control, the system is in bad state
+            # Use only signal-safe operations: write() and _exit()
+            import os
+            os.write(2, b"CRITICAL: Signal handler failed to transfer control\n")
+            os._exit(1)
+
+    def _handle_signal_safe(self, sig):
+        # This runs in the main event loop thread - safe to do complex operations
         signame = self.SIG_NAMES.get(sig)
-        logger.info('Got signal SIG_%s' % signame.upper())
+        logger.info('Got signal SIG_%s' % (signame.upper() if signame else 'UNKNOWN'))
 
         if signame is not None:
             try:
